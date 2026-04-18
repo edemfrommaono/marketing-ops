@@ -75,10 +75,13 @@ export default async function CalendarPage({
             >
               <span className="material-symbols-outlined text-[18px]">chevron_right</span>
             </Link>
-            <button className="flex items-center gap-2 px-4 py-2 bg-editorial text-white rounded-lg text-sm font-medium hover:bg-editorial/90 transition-colors shadow-sm">
+            <Link
+              href={`/calendar/new?year=${year}&month=${month}`}
+              className="flex items-center gap-2 px-4 py-2 bg-editorial text-white rounded-lg text-sm font-medium hover:bg-editorial/90 transition-colors shadow-sm"
+            >
               <span className="material-symbols-outlined text-[18px]">add</span>
               Nouvelle entrée
-            </button>
+            </Link>
           </div>
         </div>
 
