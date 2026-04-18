@@ -5,8 +5,8 @@ import { prisma } from "@/lib/db";
 import { UserRole } from "@prisma/client";
 
 // ── Route protection rules ──────────────────────────────────────────────────
-const PUBLIC_PATHS  = ["/auth/", "/client/"];
-const ADMIN_PATHS   = ["/admin"];
+const PUBLIC_PATHS = ["/auth/", "/client/"];
+const ADMIN_PATHS  = ["/admin"];
 
 function isPublic(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
@@ -61,8 +61,9 @@ export const authConfig: NextAuthConfig = {
             image: user.image ?? null,
             role:  user.role,
           };
-        } catch {
-          // DB unavailable (dev / no migration applied yet)
+        } catch (err) {
+          // DB unavailable — ne pas laisser passer
+          console.error("[auth] DB error during authorize:", err);
           return null;
         }
       },
@@ -70,33 +71,24 @@ export const authConfig: NextAuthConfig = {
   ],
 
   callbacks: {
-    // ── Edge: runs inside middleware ─────────────────────────────────────────
+    // ── Edge: protège les routes ─────────────────────────────────────────────
     authorized({ auth: session, request: { nextUrl } }) {
-      // Dev bypass — set DEV_AUTH_BYPASS=true in .env to skip auth
-      if (process.env.DEV_AUTH_BYPASS === "true") return true;
+      const pathname    = nextUrl.pathname;
+      const isLoggedIn  = !!session?.user;
 
-      const pathname = nextUrl.pathname;
-
-      // Root → always redirect to /strategy
-      if (pathname === "/") {
-        return Response.redirect(new URL("/strategy", nextUrl));
-      }
-
-      // Public routes: auth pages + client portal
+      // Routes publiques : auth pages + portail client
       if (isPublic(pathname)) return true;
 
-      const isLoggedIn = !!session?.user;
-
-      // Admin routes require ADMIN role
+      // Routes admin : ADMIN uniquement
       if (isAdmin(pathname)) {
-        return isLoggedIn && session.user.role === UserRole.ADMIN;
+        return isLoggedIn && session!.user.role === UserRole.ADMIN;
       }
 
-      // All other routes require login
+      // Toutes les autres routes : connexion requise
       return isLoggedIn;
     },
 
-    // ── Server: embed id + role into the JWT ─────────────────────────────────
+    // ── Server: injecte id + role dans le JWT ────────────────────────────────
     jwt({ token, user }) {
       if (user) {
         token.id   = user.id as string;
@@ -105,7 +97,7 @@ export const authConfig: NextAuthConfig = {
       return token;
     },
 
-    // ── Server: expose id + role on the session object ───────────────────────
+    // ── Server: expose id + role sur la session ──────────────────────────────
     session({ session, token }) {
       session.user.id   = token.id   as string;
       session.user.role = token.role as UserRole;

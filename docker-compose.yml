@@ -65,7 +65,6 @@ services:
       - S3_BUCKET_NAME=mops-storage
       - NEXTAUTH_URL=http://localhost:3000
       - AUTH_SECRET=dev_local_secret_change_in_production_32chars
-      - DEV_AUTH_BYPASS=true
       - NODE_ENV=development
     volumes:
       - ./web:/app

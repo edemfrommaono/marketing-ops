@@ -13,7 +13,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   const adminEmail    = process.env.SEED_ADMIN_EMAIL    ?? "admin@maono-ops.com";
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "ChangeMeInProd!";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "Admin1234!";
   const adminName     = process.env.SEED_ADMIN_NAME     ?? "Admin Maono";
 
   const hashedPassword = await bcrypt.hash(adminPassword, 12);
@@ -40,7 +40,7 @@ async function main() {
       email:          editorEmail,
       name:           "Sophie L.",
       role:           UserRole.STRATEGIST,
-      hashedPassword: await bcrypt.hash("editor1234", 12),
+      hashedPassword: await bcrypt.hash("Editor1234!", 12),
     },
   });
 
