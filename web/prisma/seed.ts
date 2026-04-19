@@ -22,10 +22,11 @@ async function main() {
     where:  { email: adminEmail },
     update: { hashedPassword, role: UserRole.ADMIN },
     create: {
-      email:          adminEmail,
-      name:           adminName,
-      role:           UserRole.ADMIN,
+      email:               adminEmail,
+      name:                adminName,
+      role:                UserRole.ADMIN,
       hashedPassword,
+      onboardingCompleted: true,
     },
   });
 
@@ -37,10 +38,11 @@ async function main() {
     where:  { email: editorEmail },
     update: {},
     create: {
-      email:          editorEmail,
-      name:           "Sophie L.",
-      role:           UserRole.STRATEGIST,
-      hashedPassword: await bcrypt.hash("Editor1234!", 12),
+      email:               editorEmail,
+      name:                "Sophie L.",
+      role:                UserRole.STRATEGIST,
+      hashedPassword:      await bcrypt.hash("Editor1234!", 12),
+      onboardingCompleted: true,
     },
   });
 

@@ -2,10 +2,7 @@ import Link from "next/link";
 import { getGlobalKpis } from "@/lib/data/performance";
 import { getCampaigns } from "@/lib/data/campaigns";
 import { getPlatformBreakdown } from "@/lib/data/calendar";
-
-// Monthly reach trend — static mock (time-series aggregation pending data layer)
-const MONTH_REACH = [42, 68, 55, 80, 74, 95, 88, 110, 105, 128, 140, 164]; // in k
-const MONTHS = ["Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc","Jan","Fév","Mar","Avr"];
+import { prisma } from "@/lib/db";
 
 const STATUS_STYLES: Record<string, string> = {
   ACTIVE:    "bg-emerald-50 text-emerald-700",
@@ -18,7 +15,6 @@ const STATUS_LABELS: Record<string, string> = {
   ACTIVE: "Actif", DRAFT: "Brouillon", COMPLETED: "Terminé", PAUSED: "En pause", ARCHIVED: "Archivé",
 };
 
-const maxReach = Math.max(...MONTH_REACH);
 const BAR_MAX_PX = 120;
 
 function formatReach(value: number): string {
@@ -27,12 +23,51 @@ function formatReach(value: number): string {
   return String(value);
 }
 
+// Build last-12-months reach data from Performance records
+async function getMonthlyReach(): Promise<{ month: string; value: number }[]> {
+  try {
+    const now  = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+
+    const records = await prisma.performance.findMany({
+      where:  { collectedAt: { gte: from } },
+      select: { reach: true, collectedAt: true },
+    });
+
+    // Build map: "YYYY-MM" → sum of reach
+    const map = new Map<string, number>();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(from.getFullYear(), from.getMonth() + i, 1);
+      map.set(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, 0);
+    }
+    for (const r of records) {
+      const key = `${r.collectedAt.getFullYear()}-${String(r.collectedAt.getMonth() + 1).padStart(2, "0")}`;
+      if (map.has(key)) map.set(key, (map.get(key) ?? 0) + r.reach);
+    }
+
+    const MONTH_NAMES = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+    return Array.from(map.entries()).map(([key, value]) => {
+      const monthIdx = parseInt(key.split("-")[1], 10) - 1;
+      return { month: MONTH_NAMES[monthIdx], value };
+    });
+  } catch {
+    return Array(12).fill(0).map((_, i) => {
+      const MONTH_NAMES = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+      const idx = (new Date().getMonth() - 11 + i + 12) % 12;
+      return { month: MONTH_NAMES[idx], value: 0 };
+    });
+  }
+}
+
 export default async function AnalyticsPage() {
-  const [kpis, { campaigns }, platformBreakdown] = await Promise.all([
+  const [kpis, { campaigns }, platformBreakdown, monthlyReach] = await Promise.all([
     getGlobalKpis(),
     getCampaigns({ limit: 20 }),
     getPlatformBreakdown(),
+    getMonthlyReach(),
   ]);
+
+  const maxReachValue = Math.max(...monthlyReach.map(m => m.value), 1);
 
   const KPI_TOTALS = [
     {
@@ -106,30 +141,41 @@ export default async function AnalyticsPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          {/* Reach chart — monthly trend (static mock, time-series data layer pending) */}
+          {/* Reach chart — monthly trend (real Performance data) */}
           <div className="lg:col-span-2 bg-white rounded-xl border border-slate-100 shadow-soft p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-sm font-bold text-anthracite">Évolution du reach</h3>
-              <span className="text-2xs text-slate-400">12 derniers mois (en milliers)</span>
+              <span className="text-2xs text-slate-400">12 derniers mois</span>
             </div>
-            <div className="flex items-end gap-1.5" style={{ height: "160px" }}>
-              {MONTH_REACH.map((val, i) => {
-                const barH = Math.round((val / maxReach) * BAR_MAX_PX);
-                const isLast = i === MONTH_REACH.length - 1;
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1 group relative">
-                    <div className="absolute left-1/2 -translate-x-1/2 bg-anthracite text-white text-2xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none" style={{ bottom: `${barH + 24}px` }}>
-                      {val}k
+            {monthlyReach.every(m => m.value === 0) ? (
+              <div className="flex flex-col items-center justify-center h-40 text-center">
+                <span className="material-symbols-outlined text-slate-300 text-[32px] mb-2">bar_chart</span>
+                <p className="text-xs text-slate-400">Aucune donnée de performance disponible.</p>
+                <p className="text-2xs text-slate-400 mt-1">Publiez du contenu pour voir les statistiques.</p>
+              </div>
+            ) : (
+              <div className="flex items-end gap-1.5" style={{ height: "160px" }}>
+                {monthlyReach.map((m, i) => {
+                  const barH   = Math.round((m.value / maxReachValue) * BAR_MAX_PX);
+                  const isLast = i === monthlyReach.length - 1;
+                  const label  = m.value >= 1000 ? `${(m.value / 1000).toFixed(0)}k` : String(m.value);
+                  return (
+                    <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1 group relative">
+                      {m.value > 0 && (
+                        <div className="absolute left-1/2 -translate-x-1/2 bg-anthracite text-white text-2xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none" style={{ bottom: `${barH + 24}px` }}>
+                          {label}
+                        </div>
+                      )}
+                      <div
+                        className={`w-full rounded-t-sm transition-all ${isLast ? "bg-editorial" : "bg-editorial/30 group-hover:bg-editorial/50"}`}
+                        style={{ height: `${Math.max(barH, 2)}px` }}
+                      />
+                      <span className="text-2xs text-slate-400">{m.month}</span>
                     </div>
-                    <div
-                      className={`w-full rounded-t-sm transition-all ${isLast ? "bg-editorial" : "bg-editorial/30 group-hover:bg-editorial/50"}`}
-                      style={{ height: `${barH}px` }}
-                    />
-                    <span className="text-2xs text-slate-400">{MONTHS[i]}</span>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Platform breakdown — wired to real calendar data */}

@@ -9,20 +9,9 @@ import {
   rejectContent,
 } from "@/lib/actions/approvals";
 
-const CHECKLIST = [
-  { id: "c1", label: "Cohérence avec le brief créatif",     checked: true  },
-  { id: "c2", label: "Respect du ton de marque",            checked: true  },
-  { id: "c3", label: "Données sources vérifiées",           checked: false },
-  { id: "c4", label: "SEO optimisé (mots-clés cibles)",     checked: true  },
-  { id: "c5", label: "Longueur conforme (800-1200 mots)",   checked: true  },
-  { id: "c6", label: "Visuels inclus / demandés",           checked: false },
-];
-
 export default async function ApprovalReviewPage({ params }: { params: { id: string } }) {
   const content = await getContentById(params.id);
   if (!content) notFound();
-
-  const checkedCount = CHECKLIST.filter(c => c.checked).length;
 
   const deadline = content.deadline
     ? new Date(content.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
@@ -158,28 +147,44 @@ export default async function ApprovalReviewPage({ params }: { params: { id: str
 
           {/* Review panel — right 2/5 */}
           <div className="lg:col-span-2 space-y-5">
-            {/* Checklist */}
-            <div className="bg-white rounded-xl border border-slate-100 shadow-soft p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Checklist de révision</h4>
-                <span className="text-xs font-bold text-anthracite">{checkedCount}/{CHECKLIST.length}</span>
-              </div>
-              <div className="w-full bg-slate-100 h-1.5 rounded-full mb-4">
-                <div className="h-1.5 bg-editorial rounded-full" style={{ width: `${(checkedCount / CHECKLIST.length) * 100}%` }} />
-              </div>
-              <div className="space-y-2.5">
-                {CHECKLIST.map(item => (
-                  <label key={item.id} className="flex items-start gap-3 cursor-pointer group">
-                    <div className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all ${
-                      item.checked ? "bg-editorial border-editorial" : "border-slate-300 group-hover:border-editorial/60"
-                    }`}>
-                      {item.checked && <span className="material-symbols-outlined text-white text-[12px]">check</span>}
+            {/* Current approval status */}
+            {content.approvals.length > 0 && (() => {
+              const latest = content.approvals[content.approvals.length - 1];
+              const APPROVAL_STYLES: Record<string, string> = {
+                PENDING:          "bg-slate-100 text-slate-600",
+                APPROVED:         "bg-emerald-50 text-emerald-700",
+                REJECTED:         "bg-red-50 text-red-700",
+                REVISION_REQUIRED:"bg-amber-50 text-amber-700",
+              };
+              const APPROVAL_LABELS: Record<string, string> = {
+                PENDING: "En attente", APPROVED: "Approuvé", REJECTED: "Refusé", REVISION_REQUIRED: "Révision requise",
+              };
+              return (
+                <div className="bg-white rounded-xl border border-slate-100 shadow-soft p-5">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">Statut d'approbation</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Interne</span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-2xs font-bold ${APPROVAL_STYLES[latest.internalStatus] ?? "bg-slate-100 text-slate-600"}`}>
+                        {APPROVAL_LABELS[latest.internalStatus] ?? latest.internalStatus}
+                      </span>
                     </div>
-                    <span className={`text-xs ${item.checked ? "text-slate-500 line-through" : "text-anthracite"}`}>{item.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Client</span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-2xs font-bold ${APPROVAL_STYLES[latest.clientStatus] ?? "bg-slate-100 text-slate-600"}`}>
+                        {APPROVAL_LABELS[latest.clientStatus] ?? latest.clientStatus}
+                      </span>
+                    </div>
+                    {latest.reviewedBy && (
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                        <span className="text-xs text-slate-500">Révisé par</span>
+                        <span className="text-xs font-medium text-anthracite">{latest.reviewedBy.name ?? latest.reviewedBy.email}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Decision form — textarea + 3 buttons via formAction */}
             <form className="space-y-5">

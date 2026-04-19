@@ -1,5 +1,6 @@
-import { prisma } from "@/lib/db";
+import { getClientOptions } from "@/lib/data/clients";
 import { createCampaign } from "@/lib/actions/campaigns";
+import { ClientSelectWithCreate } from "@/components/ui/ClientSelectWithCreate";
 
 export default async function NewCampaignPage() {
   const PLATFORMS = ["INSTAGRAM", "FACEBOOK", "LINKEDIN", "TIKTOK", "YOUTUBE", "X"];
@@ -8,15 +9,7 @@ export default async function NewCampaignPage() {
     TIKTOK: "music_video", YOUTUBE: "play_circle", X: "tag",
   };
 
-  let clients: { id: string; name: string }[] = [];
-  try {
-    clients = await prisma.client.findMany({
-      select:  { id: true, name: true },
-      orderBy: { name: "asc" },
-    });
-  } catch {
-    // DB unavailable — fallback to empty list
-  }
+  const clients = await getClientOptions();
 
   return (
     <div className="flex-1 min-h-screen">
@@ -47,26 +40,7 @@ export default async function NewCampaignPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-anthracite mb-1.5">Client *</label>
-                <div className="relative">
-                  <select
-                    name="clientId"
-                    className="w-full appearance-none px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:border-editorial outline-none bg-white"
-                  >
-                    <option value="">Sélectionner un client</option>
-                    {clients.length > 0 ? (
-                      clients.map(client => (
-                        <option key={client.id} value={client.id}>{client.name}</option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="odoo">Odoo SA</option>
-                        <option value="eco">EcoPartner</option>
-                        <option value="tech">TechCorp</option>
-                      </>
-                    )}
-                  </select>
-                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
-                </div>
+                <ClientSelectWithCreate clients={clients} name="clientId" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-anthracite mb-1.5">Objectif de campagne *</label>
