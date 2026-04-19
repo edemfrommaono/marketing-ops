@@ -37,3 +37,7 @@ coverage/
 # ── Misc ─────────────────────────────────────────────────────────────────────
 *.tsbuildinfo
 .turbo/
+.claude/
+
+# ── Credentials locaux — ne jamais commiter ───────────────────────────────────
+ACCES.md
