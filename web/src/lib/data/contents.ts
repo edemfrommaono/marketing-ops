@@ -108,7 +108,25 @@ export async function getContentById(id: string): Promise<ContentDetail | null> 
 }
 
 /** Contents awaiting approval — INTERNAL_REVIEW or CLIENT_REVIEW */
-export async function getApprovalsQueue() {
+export async function getApprovalsQueue(options?: { assignedToId?: string }) {
+  // If filtering by reviewer, narrow the query directly
+  if (options?.assignedToId) {
+    const { prisma: db } = await import("@/lib/db");
+    const contents = await db.content.findMany({
+      where: {
+        status: { in: [ContentStatus.INTERNAL_REVIEW, ContentStatus.CLIENT_REVIEW] },
+        tasks:  { some: { assignedToId: options.assignedToId } },
+      },
+      include: {
+        calendarEntry: { include: { campaign: { select: { id: true, name: true } } } },
+        _count:    { select: { assets: true, tasks: true } },
+        approvals: { select: { internalStatus: true, clientStatus: true } },
+      },
+      orderBy: { deadline: "asc" },
+      take:    100,
+    });
+    return { contents, total: contents.length };
+  }
   return getContents({
     status: [ContentStatus.INTERNAL_REVIEW, ContentStatus.CLIENT_REVIEW],
     limit:  100,

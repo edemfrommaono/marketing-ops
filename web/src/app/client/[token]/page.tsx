@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { ContentStatus, Platform, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { enqueueEmail } from "@/lib/queue/enqueue";
 
 // ── Derived types ─────────────────────────────────────────────────────────────
 type PortalContent = Prisma.ContentGetPayload<{
@@ -33,10 +34,88 @@ async function clientApproveAction(formData: FormData) {
     });
   }
 
-  await prisma.content.update({
+  const content = await prisma.content.update({
     where: { id: contentId },
     data: { status: "APPROVED" as ContentStatus },
+    select: { title: true },
   });
+
+  // Notify internal team that client approved
+  const tasks = await prisma.productionTask.findMany({
+    where: { contentId },
+    include: { assignedTo: { select: { email: true, name: true } } },
+  });
+  for (const task of tasks) {
+    if (task.assignedTo?.email) {
+      await enqueueEmail({
+        type: "content-approved",
+        recipientEmail: task.assignedTo.email,
+        recipientName:  task.assignedTo.name || undefined,
+        data: {
+          contentTitle: content.title,
+          approverName: "Le client",
+          contentLink:  `${process.env.NEXTAUTH_URL}/contents/${contentId}`,
+          nextStep:     "Le client a approuvé le contenu. Il peut être planifié pour publication.",
+        },
+      });
+    }
+  }
+
+  const token = (formData.get("token") as string) ?? "";
+  revalidatePath(`/client/${token}`);
+}
+
+// ── Server Action — client request revision ───────────────────────────────────
+async function clientRequestRevisionAction(formData: FormData) {
+  "use server";
+  const contentId = formData.get("contentId") as string | null;
+  if (!contentId) return;
+
+  const comment = (formData.get("comment") as string | null) ?? undefined;
+  const existing = await prisma.approval.findFirst({ where: { contentId } });
+  if (existing) {
+    await prisma.approval.update({
+      where: { id: existing.id },
+      data: { clientStatus: "REVISION_REQUIRED", reviewedAt: new Date(), clientNote: comment },
+    });
+  } else {
+    await prisma.approval.create({
+      data: {
+        contentId,
+        internalStatus: "PENDING",
+        clientStatus: "REVISION_REQUIRED",
+        reviewedAt: new Date(),
+        clientNote: comment,
+      },
+    });
+  }
+
+  const content = await prisma.content.update({
+    where: { id: contentId },
+    data: { status: "REVISION_REQUIRED" as ContentStatus },
+    select: { title: true },
+  });
+
+  // Notify internal team of revision request
+  const tasks = await prisma.productionTask.findMany({
+    where: { contentId },
+    include: { assignedTo: { select: { email: true, name: true } } },
+  });
+  for (const task of tasks) {
+    if (task.assignedTo?.email) {
+      await enqueueEmail({
+        type: "revision-required",
+        recipientEmail: task.assignedTo.email,
+        recipientName:  task.assignedTo.name || undefined,
+        data: {
+          contentTitle: content.title,
+          reviewerName: "Le client",
+          comment:      comment || "Le client demande des modifications. Consultez le portail client pour plus de détails.",
+          contentLink:  `${process.env.NEXTAUTH_URL}/contents/${contentId}`,
+        },
+      });
+    }
+  }
 
   const token = (formData.get("token") as string) ?? "";
   revalidatePath(`/client/${token}`);
@@ -344,17 +423,21 @@ export default async function ClientPortalPage({
                               </span>
                               Approuver
                             </button>
-                            <button
-                              type="button"
-                              className="flex-1 flex items-center justify-center gap-2 py-2.5 border-2 border-amber-400 text-amber-700 rounded-xl text-sm font-bold hover:bg-amber-50 transition-colors"
-                            >
-                              <span className="material-symbols-outlined text-[16px]">
-                                edit
-                              </span>
-                              Demander modifications
-                            </button>
                           </div>
                         </div>
+                      </form>
+                      <form action={clientRequestRevisionAction}>
+                        <input type="hidden" name="contentId" value={ct.id} />
+                        <input type="hidden" name="token" value={params.token} />
+                        <button
+                          type="submit"
+                          className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-amber-400 text-amber-700 rounded-xl text-sm font-bold hover:bg-amber-50 transition-colors mt-2"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">
+                            edit
+                          </span>
+                          Demander modifications
+                        </button>
                       </form>
                     </div>
                   </div>

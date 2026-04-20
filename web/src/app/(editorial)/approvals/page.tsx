@@ -3,14 +3,24 @@ import { ContentStatusBadge, TeamBadge } from "@/components/ui/StatusBadge";
 import { PlatformBadge } from "@/components/editorial/PlatformBadge";
 import { ContentStatus } from "@prisma/client";
 import { getApprovalsQueue } from "@/lib/data/contents";
+import { auth } from "@/auth";
 
 const REVIEW_TYPE_STYLES: Record<string, string> = {
   INTERNAL: "bg-purple-50 text-purple-700",
   CLIENT:   "bg-violet-50 text-violet-700",
 };
 
-export default async function ApprovalsPage() {
-  const { contents } = await getApprovalsQueue();
+interface Props {
+  searchParams: { mine?: string };
+}
+
+export default async function ApprovalsPage({ searchParams }: Props) {
+  const session    = await auth();
+  const filterMine = searchParams.mine === "1";
+
+  const { contents } = await getApprovalsQueue(
+    filterMine && session?.user?.id ? { assignedToId: session.user.id } : undefined
+  );
 
   const now = new Date();
   const withMeta = contents.map(ct => {
@@ -30,7 +40,7 @@ export default async function ApprovalsPage() {
       <main className="px-8 py-8 max-w-[1400px] mx-auto">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-start justify-between mb-8 gap-4">
           <div>
             <h2 className="text-2xl font-bold text-anthracite mb-1">File d'approbation</h2>
             <p className="text-slate-400 text-sm">
@@ -39,6 +49,30 @@ export default async function ApprovalsPage() {
               {internal > 0 && <> · <span className="text-purple-600 font-medium">{internal} révisions internes</span></>}
               {client   > 0 && <> · <span className="text-violet-600 font-medium">{client} révisions client</span></>}
             </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link
+              href="/approvals"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                !filterMine
+                  ? "bg-editorial text-white"
+                  : "border border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">list</span>
+              Toutes
+            </Link>
+            <Link
+              href="/approvals?mine=1"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                filterMine
+                  ? "bg-editorial text-white"
+                  : "border border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">person</span>
+              Mes révisions
+            </Link>
           </div>
         </div>
 

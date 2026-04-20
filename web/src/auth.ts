@@ -54,10 +54,14 @@ export const authConfig: NextAuthConfig = {
               role:                true,
               hashedPassword:      true,
               onboardingCompleted: true,
+              isActive:            true,
             },
           });
 
           if (!user?.hashedPassword) return null;
+
+          // Reject deactivated accounts
+          if (user.isActive === false) return null;
 
           const isValid = await bcrypt.compare(password, user.hashedPassword);
           if (!isValid) return null;
@@ -96,9 +100,10 @@ export const authConfig: NextAuthConfig = {
       }
 
       // Onboarding non complété → redirige vers /onboarding
-      // (sauf si on est déjà sur /onboarding)
+      // Uniquement pour les ADMIN (les collaborateurs invités n'ont pas à configurer l'agence)
       const onboardingDone = (session!.user as { onboardingCompleted?: boolean }).onboardingCompleted;
-      if (onboardingDone === false && !isOnboarding(pathname)) {
+      const isAdminRole    = session!.user.role === UserRole.ADMIN;
+      if (isAdminRole && onboardingDone === false && !isOnboarding(pathname)) {
         return Response.redirect(new URL("/onboarding", nextUrl));
       }
 
@@ -109,8 +114,8 @@ export const authConfig: NextAuthConfig = {
     jwt({ token, user }) {
       if (user) {
         token.id                  = user.id as string;
-        token.role                = (user as { role: UserRole }).role;
-        token.onboardingCompleted = (user as { onboardingCompleted: boolean }).onboardingCompleted;
+        token.role                = (user as any).role;
+        token.onboardingCompleted = (user as any).onboardingCompleted;
       }
       return token;
     },

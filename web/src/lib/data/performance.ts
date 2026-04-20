@@ -9,9 +9,14 @@ export interface GlobalKpis {
   contentCount:     number;
 }
 
-export async function getGlobalKpis(): Promise<GlobalKpis> {
+export async function getGlobalKpis(from?: Date, to?: Date): Promise<GlobalKpis> {
   try {
+    const where = from || to
+      ? { collectedAt: { ...(from && { gte: from }), ...(to && { lte: to }) } }
+      : undefined;
+
     const agg = await prisma.performance.aggregate({
+      where,
       _sum: {
         reach:       true,
         engagement:  true,

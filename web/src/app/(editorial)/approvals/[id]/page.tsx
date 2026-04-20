@@ -7,11 +7,27 @@ import {
   approveContent,
   requestRevision,
   rejectContent,
+  addApprovalComment,
 } from "@/lib/actions/approvals";
+import { prisma } from "@/lib/db";
 
 export default async function ApprovalReviewPage({ params }: { params: { id: string } }) {
   const content = await getContentById(params.id);
   if (!content) notFound();
+
+  // Fetch approval + comments (graceful: table may not exist yet)
+  const approval = await prisma.approval.findFirst({
+    where: { contentId: params.id },
+    select: { id: true },
+  }).catch(() => null);
+
+  const comments = approval
+    ? await prisma.approvalComment.findMany({
+        where:   { approvalId: approval.id },
+        include: { author: { select: { name: true, email: true } } },
+        orderBy: { createdAt: "asc" },
+      }).catch(() => [])
+    : [];
 
   const deadline = content.deadline
     ? new Date(content.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
@@ -229,6 +245,63 @@ export default async function ApprovalReviewPage({ params }: { params: { id: str
                 </div>
               </div>
             </form>
+
+            {/* Comment thread */}
+            {approval && (
+              <div className="bg-white rounded-xl border border-slate-100 shadow-soft p-5 mt-6">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">
+                  Discussion ({comments.length})
+                </h4>
+
+                {/* Existing comments */}
+                {comments.length === 0 ? (
+                  <p className="text-sm text-slate-400 italic mb-4">Aucun commentaire pour l&apos;instant.</p>
+                ) : (
+                  <div className="space-y-3 mb-5">
+                    {comments.map((c: { id: string; body: string; createdAt: Date; author: { name?: string | null; email?: string | null } }) => (
+                      <div key={c.id} className="flex gap-3">
+                        <div className="w-7 h-7 rounded-full bg-secondary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-2xs font-bold text-secondary">
+                            {(c.author.name ?? c.author.email ?? "?")[0].toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex-1 bg-slate-50 rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-xs font-semibold text-anthracite">{c.author.name ?? c.author.email}</p>
+                            <p className="text-2xs text-slate-400">
+                              {new Date(c.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                          <p className="text-sm text-slate-700 whitespace-pre-wrap">{c.body}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add comment form */}
+                <form action={async (formData: FormData) => {
+                  "use server";
+                  const body = formData.get("commentBody") as string;
+                  if (body?.trim()) await addApprovalComment(approval.id, body);
+                }}>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      name="commentBody"
+                      placeholder="Ajouter un commentaire…"
+                      className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-editorial focus:ring-1 focus:ring-editorial/20 outline-none"
+                    />
+                    <button
+                      type="submit"
+                      className="flex items-center gap-1.5 px-3 py-2 bg-editorial text-white rounded-lg text-sm font-semibold hover:bg-editorial/90 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">send</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
           </div>
         </div>
       </main>

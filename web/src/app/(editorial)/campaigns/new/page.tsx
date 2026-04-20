@@ -35,6 +35,7 @@ export default async function NewCampaignPage() {
                   type="text"
                   name="name"
                   placeholder="ex. Q4 Product Launch 2024"
+                  required
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:border-editorial focus:ring-1 focus:ring-editorial/20 outline-none"
                 />
               </div>
@@ -48,6 +49,7 @@ export default async function NewCampaignPage() {
                   name="objective"
                   rows={3}
                   placeholder="Décrivez l'objectif stratégique de cette campagne..."
+                  required
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:border-editorial focus:ring-1 focus:ring-editorial/20 outline-none resize-none"
                 />
               </div>
@@ -57,6 +59,7 @@ export default async function NewCampaignPage() {
                   <input
                     type="date"
                     name="startDate"
+                    required
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:border-editorial outline-none"
                   />
                 </div>
@@ -65,6 +68,7 @@ export default async function NewCampaignPage() {
                   <input
                     type="date"
                     name="endDate"
+                    required
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:border-editorial outline-none"
                   />
                 </div>

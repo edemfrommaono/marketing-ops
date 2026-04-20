@@ -26,19 +26,26 @@ async function loginAction(formData: FormData) {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 interface Props {
-  searchParams: { error?: string; callbackUrl?: string };
+  searchParams: { error?: string; callbackUrl?: string; reset?: string };
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
   CredentialsSignin:      "Email ou mot de passe incorrect.",
+  CallbackRouteError:     "Erreur de connexion. Veuillez réessayer.",
   OAuthAccountNotLinked:  "Ce compte est déjà associé à un autre fournisseur.",
   SessionRequired:        "Vous devez être connecté pour accéder à cette page.",
+  AccessDenied:           "Accès refusé. Votre compte n'est pas autorisé.",
+  Verification:           "Lien de vérification invalide ou expiré.",
   Default:                "Une erreur est survenue. Veuillez réessayer.",
+  reset:                  "Mot de passe réinitialisé avec succès. Connectez-vous.",
 };
 
 export default function LoginPage({ searchParams }: Props) {
   const errorMessage = searchParams.error
     ? (ERROR_MESSAGES[searchParams.error] ?? ERROR_MESSAGES.Default)
+    : null;
+  const successMessage = searchParams.reset
+    ? ERROR_MESSAGES.reset
     : null;
 
   return (
@@ -93,6 +100,14 @@ export default function LoginPage({ searchParams }: Props) {
 
           <h1 className="text-2xl font-bold text-anthracite mb-1">Connexion</h1>
           <p className="text-slate-400 text-sm mb-8">Accédez à votre espace éditorial</p>
+
+          {/* Success banner */}
+          {successMessage && (
+            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg px-4 py-3 mb-6 text-sm">
+              <span className="material-symbols-outlined text-[18px] flex-shrink-0">check_circle</span>
+              {successMessage}
+            </div>
+          )}
 
           {/* Error banner */}
           {errorMessage && (
@@ -174,10 +189,13 @@ export default function LoginPage({ searchParams }: Props) {
 
           <button
             type="button"
-            className="mt-4 w-full flex items-center justify-center gap-3 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+            disabled
+            title="SSO disponible prochainement"
+            className="mt-4 w-full flex items-center justify-center gap-3 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-400 bg-slate-50 cursor-not-allowed opacity-60"
           >
             <span className="material-symbols-outlined text-[20px]">corporate_fare</span>
             Continuer avec SSO
+            <span className="ml-auto text-[10px] bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded font-semibold tracking-wide">BIENTÔT</span>
           </button>
 
           <p className="mt-8 text-center text-xs text-slate-400">

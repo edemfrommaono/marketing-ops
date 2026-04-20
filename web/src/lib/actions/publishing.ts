@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ContentStatus } from "@prisma/client";
+import { enqueueEmail } from "@/lib/queue/enqueue";
 
 export async function publishContent(contentId: string) {
   const session = await auth();
@@ -49,6 +50,27 @@ export async function publishContent(contentId: string) {
         newValue:   { status: ContentStatus.PUBLISHED },
       },
     });
+
+    // Notify the production team that content is published
+    const tasks = await prisma.productionTask.findMany({
+      where: { contentId },
+      include: { assignedTo: true },
+    });
+    for (const task of tasks) {
+      if (task.assignedTo?.email) {
+        await enqueueEmail({
+          type: "content-approved",
+          recipientEmail: task.assignedTo.email,
+          recipientName: task.assignedTo.name || undefined,
+          data: {
+            contentTitle: content.title,
+            approverName: session.user.name || "L'équipe",
+            contentLink:  `${process.env.NEXTAUTH_URL}/contents/${contentId}`,
+            nextStep:     "Le contenu est maintenant publié 🎉",
+          },
+        });
+      }
+    }
 
     revalidatePath("/publishing");
     revalidatePath(`/contents/${contentId}`);

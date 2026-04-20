@@ -3,6 +3,7 @@ import { ContentStatusBadge, TeamBadge } from "@/components/ui/StatusBadge";
 import { PlatformBadge } from "@/components/editorial/PlatformBadge";
 import { ContentStatus } from "@prisma/client";
 import { getPublishingQueue } from "@/lib/data/contents";
+import { PublishingPreviewButton } from "@/components/editorial/PublishingPreviewPanel";
 
 export default async function PublishingPage() {
   const { contents } = await getPublishingQueue();
@@ -71,6 +72,16 @@ export default async function PublishingPage() {
                       {daysLeft === 0 ? "Aujourd'hui" : daysLeft < 0 ? "En retard" : `J-${daysLeft}`}
                     </div>
                     <div className="flex-shrink-0 flex gap-2">
+                      <PublishingPreviewButton content={{
+                        id:         ct.id,
+                        title:      ct.title,
+                        briefNotes: ct.briefNotes ?? null,
+                        platform:   ct.calendarEntry.platform,
+                        format:     ct.format,
+                        campaign:   ct.calendarEntry.campaign.name,
+                        deadline:   new Date(ct.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }),
+                        status:     ct.status,
+                      }} />
                       <button className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium hover:bg-slate-50 transition-colors">
                         <span className="material-symbols-outlined text-[14px]">calendar_add_on</span>Planifier
                       </button>

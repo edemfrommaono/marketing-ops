@@ -1,12 +1,57 @@
 import { prisma } from "@/lib/db";
+import IORedis from "ioredis";
+
+type HealthStatus = "ok" | "error" | "unknown";
+interface HealthCheck { name: string; icon: string; desc: string; status: HealthStatus; latency: number; detail?: string }
+
+async function runHealthChecks(): Promise<HealthCheck[]> {
+  const checks: HealthCheck[] = [];
+
+  // PostgreSQL
+  const pgStart = Date.now();
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    checks.push({ name: "PostgreSQL", icon: "database", desc: "Base de données principale", status: "ok", latency: Date.now() - pgStart });
+  } catch (e) {
+    checks.push({ name: "PostgreSQL", icon: "database", desc: "Base de données principale", status: "error", latency: Date.now() - pgStart, detail: (e as Error).message });
+  }
+
+  // Redis
+  const redisStart = Date.now();
+  try {
+    const redis = new IORedis(process.env.REDIS_URL || "redis://localhost:6379", { maxRetriesPerRequest: 1, connectTimeout: 3000, lazyConnect: true });
+    await redis.connect();
+    await redis.ping();
+    await redis.disconnect();
+    checks.push({ name: "Redis / BullMQ", icon: "memory", desc: "File de tâches BullMQ", status: "ok", latency: Date.now() - redisStart });
+  } catch (e) {
+    checks.push({ name: "Redis / BullMQ", icon: "memory", desc: "File de tâches BullMQ", status: "error", latency: Date.now() - redisStart, detail: (e as Error).message });
+  }
+
+  // Next.js (always ok — we're running)
+  checks.push({ name: "Next.js", icon: "electrical_services", desc: "Application web", status: "ok", latency: 0 });
+
+  // Email queue depth (Resend key presence as proxy)
+  const emailStart = Date.now();
+  try {
+    const pendingEmails = await prisma.auditLog.count({ where: { action: "STATUS_CHANGED", createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } } });
+    checks.push({ name: "Email Worker", icon: "queue", desc: `${pendingEmails} transitions (24h)`, status: process.env.RESEND_API_KEY ? "ok" : "error", latency: Date.now() - emailStart, detail: process.env.RESEND_API_KEY ? undefined : "RESEND_API_KEY manquant" });
+  } catch {
+    checks.push({ name: "Email Worker", icon: "queue", desc: "Processeur de jobs", status: "unknown", latency: Date.now() - emailStart });
+  }
+
+  return checks;
+}
 
 export default async function SystemsMonitorPage() {
-  // Real audit log entries
-  const auditLogs = await prisma.auditLog.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 20,
-    include: { user: { select: { name: true, email: true } } },
-  }).catch(() => []);
+  const [auditLogs, healthChecks] = await Promise.all([
+    prisma.auditLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      include: { user: { select: { name: true, email: true } } },
+    }).catch(() => []),
+    runHealthChecks(),
+  ]);
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
@@ -29,25 +74,31 @@ export default async function SystemsMonitorPage() {
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-card">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-6">État de l'infrastructure</h3>
             <div className="space-y-3">
-              {[
-                { name: "PostgreSQL",  icon: "database",            desc: "Base de données principale"     },
-                { name: "Redis",       icon: "memory",              desc: "File de tâches BullMQ"           },
-                { name: "MinIO",       icon: "cloud_upload",        desc: "Stockage fichiers / assets"      },
-                { name: "Next.js",     icon: "electrical_services", desc: "Application web"                 },
-                { name: "Worker",      icon: "queue",               desc: "Processeur de jobs en arrière-plan" },
-              ].map(s => (
-                <div key={s.name} className="flex items-center gap-4 p-3 rounded-lg bg-slate-50">
-                  <span className="material-symbols-outlined text-slate-400 text-[20px]">{s.icon}</span>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-anthracite">{s.name}</p>
-                    <p className="text-2xs text-slate-400">{s.desc}</p>
+              {healthChecks.map(s => {
+                const isOk      = s.status === "ok";
+                const isError   = s.status === "error";
+                const dotColor  = isOk ? "bg-emerald-500" : isError ? "bg-red-500" : "bg-amber-400";
+                const textColor = isOk ? "text-emerald-600" : isError ? "text-red-600" : "text-amber-600";
+                const label     = isOk ? "Opérationnel" : isError ? "Erreur" : "Inconnu";
+                return (
+                  <div key={s.name} className={`flex items-center gap-4 p-3 rounded-lg ${isError ? "bg-red-50" : "bg-slate-50"}`}>
+                    <span className="material-symbols-outlined text-slate-400 text-[20px]">{s.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-anthracite">{s.name}</p>
+                      <p className="text-2xs text-slate-400 truncate">{s.detail ?? s.desc}</p>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      {s.latency > 0 && (
+                        <span className="text-2xs text-slate-400">{s.latency}ms</span>
+                      )}
+                      <span className={`flex items-center gap-1.5 text-xs font-bold ${textColor}`}>
+                        <span className={`w-2 h-2 rounded-full inline-block ${dotColor}`} />
+                        {label}
+                      </span>
+                    </div>
                   </div>
-                  <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                    Opérationnel
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

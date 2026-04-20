@@ -88,10 +88,10 @@ export default async function AdminClientsPage() {
                   <p className="text-xs font-medium text-anthracite">{c.email}</p>
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-anthracite transition-colors">
-                    <span className="material-symbols-outlined text-[16px]">edit</span>
-                  </button>
-                  <Link href={`/campaigns?client=${c.id}`} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-editorial transition-colors">
+                  <Link href={`/admin/clients/${c.id}/portal`} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-editorial transition-colors" title="Gérer le portail client">
+                    <span className="material-symbols-outlined text-[16px]">link</span>
+                  </Link>
+                  <Link href={`/campaigns?client=${c.id}`} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-editorial transition-colors" title="Voir les campagnes">
                     <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                   </Link>
                 </div>

@@ -5,7 +5,7 @@ datasource db {
 
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x", "darwin-arm64"]
 }
 
 // ─────────────────────────────────────────────
@@ -162,13 +162,17 @@ model User {
   role                 UserRole  @default(DESIGNER)
   hashedPassword       String?
   onboardingCompleted  Boolean   @default(false)
+  isActive             Boolean   @default(true)
 
   accounts     Account[]
   sessions     Session[]
   integrations IntegrationConnection[]
+  notificationPreferences NotificationPreferences?
 
   // Editorial relations
-  assignedTasks    ProductionTask[] @relation("TaskAssignee")
+  assignedTasks    ProductionTask[]   @relation("TaskAssignee")
+  reviewedContents Content[]          @relation("ContentReviewer")
+  approvalComments ApprovalComment[]
   createdCampaigns Campaign[]       @relation("CampaignCreator")
   approvals        Approval[]       @relation("ApprovalReviewer")
   publications     Publication[]    @relation("ContentPublisher")
@@ -184,6 +188,22 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model NotificationPreferences {
+  userId String @id @unique
+
+  deadlineReminders  Boolean @default(true)
+  approvalUpdates    Boolean @default(true)
+  campaignUpdates    Boolean @default(true)
+  taskAssignments    Boolean @default(true)
+
+  reminderDaysAdvance Int @default(3)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model IntegrationConnection {
@@ -277,6 +297,9 @@ model Content {
 
   calendarEntryId String
   calendarEntry   CalendarEntry @relation(fields: [calendarEntryId], references: [id], onDelete: Cascade)
+
+  reviewerId  String?
+  reviewer    User?   @relation("ContentReviewer", fields: [reviewerId], references: [id])
 
   assets      Asset[]
   approvals   Approval[]
@@ -372,6 +395,20 @@ model Approval {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  comments  ApprovalComment[]
+}
+
+/// Comment thread on an approval
+model ApprovalComment {
+  id         String   @id @default(cuid())
+  body       String   @db.Text
+  createdAt  DateTime @default(now())
+
+  approvalId String
+  approval   Approval @relation(fields: [approvalId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id])
 }
 
 /// Publication — record of a content item going live
@@ -470,6 +507,19 @@ model ClientPortalToken {
   createdAt DateTime @default(now())
 }
 
+/// Invite token — secure links for user invitations
+model InviteToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([token])
+}
+
 /// Risk — flags for late content, missing assets, client non-response
 model Risk {
   id          String    @id @default(cuid())
@@ -490,5 +540,14 @@ model Risk {
   reportedBy   User?   @relation("RiskReporter", fields: [reportedById], references: [id])
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Platform-level settings — persisted key/value store
+/// Managed via admin settings page
+model PlatformSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
   updatedAt DateTime @updatedAt
 }

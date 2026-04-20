@@ -41,6 +41,7 @@ export default async function NewContentPage() {
                   type="text"
                   name="title"
                   placeholder="ex. Q4 teaser reel"
+                  required
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:border-editorial focus:ring-1 focus:ring-editorial/20 outline-none"
                 />
               </div>
@@ -51,6 +52,7 @@ export default async function NewContentPage() {
                   <div className="relative">
                     <select
                       name="campaignId"
+                      required
                       className="w-full appearance-none px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:border-editorial outline-none bg-white"
                     >
                       <option value="">Sélectionner</option>
@@ -66,6 +68,7 @@ export default async function NewContentPage() {
                   <input
                     type="date"
                     name="deadline"
+                    required
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:border-editorial outline-none"
                   />
                 </div>

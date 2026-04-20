@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { ContentStatusBadge, TeamBadge } from "@/components/ui/StatusBadge";
-import { PlatformBadge } from "@/components/editorial/PlatformBadge";
 import { ContentStatus, ProductionTeam } from "@prisma/client";
 import { getContents } from "@/lib/data/contents";
+import { ContentsBulkList } from "@/components/editorial/ContentsBulkList";
 
 const TEAM_LABELS: Record<ProductionTeam, string> = {
   DESIGN:"Design", VIDEO:"Vidéo", PHOTOGRAPHY:"Photo", COPYWRITING:"Copy",
@@ -87,71 +86,8 @@ export default async function ContentsPage({ searchParams }: Props) {
           </div>
         )}
 
-        {/* List */}
-        {!isEmpty && (
-          <div className="space-y-2">
-            {contents.map((ct) => {
-              const deadline = new Date(ct.deadline);
-              const daysLeft = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-              const isUrgent = daysLeft <= 2 && ct.status !== ContentStatus.PUBLISHED;
-
-              return (
-                <Link key={ct.id} href={`/contents/${ct.id}`} className={`block bg-white rounded-xl border shadow-soft p-4 hover:shadow-md transition-all ${
-                  isUrgent ? "border-amber-200 bg-amber-50/10" : "border-slate-100"
-                }`}>
-                  <div className="flex items-center gap-4">
-                    {/* Urgent bar */}
-                    {isUrgent && <div className="flex-shrink-0 w-1 h-12 rounded-full bg-amber-400" />}
-
-                    {/* Title + campaign */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        {isUrgent && <span className="material-symbols-outlined text-amber-500 text-[15px]">warning</span>}
-                        <span className="text-sm font-semibold text-anthracite truncate">{ct.title}</span>
-                      </div>
-                      <p className="text-2xs text-slate-400 truncate">
-                        {ct.calendarEntry.campaign.name}
-                      </p>
-                    </div>
-
-                    {/* Platform */}
-                    <div className="flex-shrink-0">
-                      <PlatformBadge platform={ct.calendarEntry.platform} />
-                    </div>
-
-                    {/* Status */}
-                    <div className="flex-shrink-0 w-36">
-                      <ContentStatusBadge status={ct.status} />
-                    </div>
-
-                    {/* Team */}
-                    <div className="flex-shrink-0">
-                      <TeamBadge team={ct.assignedTeam} />
-                    </div>
-
-                    {/* Assets */}
-                    <div className="flex-shrink-0 flex items-center gap-1 text-slate-400">
-                      <span className="material-symbols-outlined text-[14px]">attach_file</span>
-                      <span className="text-xs">{ct._count.assets}</span>
-                    </div>
-
-                    {/* Tasks */}
-                    <div className="flex-shrink-0 flex items-center gap-1 text-slate-400">
-                      <span className="material-symbols-outlined text-[14px]">task_alt</span>
-                      <span className="text-xs">{ct._count.tasks}</span>
-                    </div>
-
-                    {/* Deadline */}
-                    <div className={`flex-shrink-0 flex items-center gap-1 text-xs font-medium ${isUrgent ? "text-amber-600" : "text-slate-400"}`}>
-                      <span className="material-symbols-outlined text-[14px]">schedule</span>
-                      {daysLeft === 0 ? "Aujourd'hui" : daysLeft < 0 ? "En retard" : `J-${daysLeft}`}
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
+        {/* List with bulk actions */}
+        {!isEmpty && <ContentsBulkList contents={contents} />}
       </main>
     </div>
   );
