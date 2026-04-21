@@ -47,6 +47,22 @@ async function main() {
   });
 
   console.log(`✅ Editor user ready: ${editor.email} (id: ${editor.id})`);
+
+  // ── User papdav ─────────────────────────────────────────────────────────────
+  const papdavEmail = "papdav@maono.co";
+  const papdav = await prisma.user.upsert({
+    where:  { email: papdavEmail },
+    update: { role: UserRole.ADMIN },
+    create: {
+      email:               papdavEmail,
+      name:                "Papdav",
+      role:                UserRole.ADMIN,
+      hashedPassword:      await bcrypt.hash("Maono2026!", 12),
+      onboardingCompleted: true,
+    },
+  });
+
+  console.log(`✅ User papdav ready: ${papdav.email} (id: ${papdav.id})`);
 }
 
 main()
