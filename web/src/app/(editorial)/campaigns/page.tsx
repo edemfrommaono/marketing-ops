@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCampaigns } from "@/lib/data/campaigns";
-import { CampaignStatus } from "@prisma/client";
+import { CampaignStatus } from "@/types/api";
 
 const STATUS_STYLES: Record<string, string> = {
   ACTIVE:    "bg-emerald-50 text-emerald-700",

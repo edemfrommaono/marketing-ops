@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { ContentStatus, Platform, type Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { ContentStatus, Platform, type Prisma } from "@/types/api";
 
 // ── Derived types ─────────────────────────────────────────────────────────────
 type PortalContent = Prisma.ContentGetPayload<{

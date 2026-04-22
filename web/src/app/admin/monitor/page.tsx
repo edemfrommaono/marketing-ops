@@ -1,12 +1,9 @@
-import { prisma } from "@/lib/db";
+import { apiClient } from "@/lib/api-client";
 
 export default async function SystemsMonitorPage() {
-  // Real audit log entries
-  const auditLogs = await prisma.auditLog.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 20,
-    include: { user: { select: { name: true, email: true } } },
-  }).catch(() => []);
+  // Fetch audit logs via API
+  const response = await apiClient.get<any[]>("/admin/audit-logs?limit=20");
+  const auditLogs = response.data || [];
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
@@ -30,11 +27,8 @@ export default async function SystemsMonitorPage() {
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-6">État de l'infrastructure</h3>
             <div className="space-y-3">
               {[
-                { name: "PostgreSQL",  icon: "database",            desc: "Base de données principale"     },
-                { name: "Redis",       icon: "memory",              desc: "File de tâches BullMQ"           },
-                { name: "MinIO",       icon: "cloud_upload",        desc: "Stockage fichiers / assets"      },
+                { name: "External API", icon: "electrical_services", desc: "API principale"                 },
                 { name: "Next.js",     icon: "electrical_services", desc: "Application web"                 },
-                { name: "Worker",      icon: "queue",               desc: "Processeur de jobs en arrière-plan" },
               ].map(s => (
                 <div key={s.name} className="flex items-center gap-4 p-3 rounded-lg bg-slate-50">
                   <span className="material-symbols-outlined text-slate-400 text-[20px]">{s.icon}</span>
@@ -51,23 +45,13 @@ export default async function SystemsMonitorPage() {
             </div>
           </div>
 
-          {/* Incidents — empty state (no Incident model yet) */}
+          {/* Incidents */}
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-card">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">Incidents actifs</h3>
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <span className="material-symbols-outlined text-emerald-400 text-[40px] mb-3">check_circle</span>
               <p className="text-sm font-semibold text-slate-600">Aucun incident signalé</p>
               <p className="text-xs text-slate-400 mt-1">Tous les services fonctionnent normalement.</p>
-            </div>
-          </div>
-
-          {/* Releases — empty state */}
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-card">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">Historique des releases</h3>
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <span className="material-symbols-outlined text-slate-300 text-[40px] mb-3">deploy</span>
-              <p className="text-sm font-semibold text-slate-500">Aucune release enregistrée</p>
-              <p className="text-xs text-slate-400 mt-1">L'historique des déploiements apparaîtra ici.</p>
             </div>
           </div>
         </div>
@@ -91,7 +75,7 @@ export default async function SystemsMonitorPage() {
                   <p className="text-sm text-slate-400">Aucune activité enregistrée.</p>
                 </div>
               )}
-              {auditLogs.map(log => {
+              {auditLogs.map((log: any) => {
                 const actor = log.user?.name ?? log.user?.email ?? "Système";
                 const date  = new Date(log.createdAt).toLocaleDateString("fr-FR", {
                   day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",

@@ -5,8 +5,8 @@ import {
   onboardingCreateCampaign,
   completeOnboarding,
 } from "@/lib/actions/onboarding";
-import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
+import { apiClient } from "@/lib/api-client";
 
 const TOTAL_STEPS = 5;
 
@@ -25,6 +25,7 @@ interface PageProps {
 
 const ERROR_MESSAGES: Record<string, string> = {
   missing_fields: "Tous les champs obligatoires (*) doivent être remplis.",
+  api_error:      "Erreur lors de l'enregistrement via API. Veuillez réessayer.",
   db_error:       "Erreur lors de l'enregistrement. Veuillez réessayer.",
   no_client:      "Aucun client trouvé. Veuillez compléter l'étape précédente.",
 };
@@ -39,7 +40,13 @@ export default async function OnboardingStepPage({ params, searchParams }: PageP
 
   // Fetch data needed for specific steps
   const session = await auth();
-  const clientCount = await prisma.client.count().catch(() => 0);
+  
+  // Use API client for client count instead of Prisma
+  let clientCount = 0;
+  if (stepNum === 3) {
+    const response = await apiClient.get<{ count: number }>("/onboarding/client-count");
+    clientCount = response.data?.count ?? 0;
+  }
 
   return (
     <div className="w-full max-w-xl">

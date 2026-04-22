@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ContentStatusBadge } from "@/components/ui/StatusBadge";
 import { PlatformBadge } from "@/components/editorial/PlatformBadge";
-import { ContentStatus, CampaignStatus } from "@prisma/client";
+import { ContentStatus, CampaignStatus } from "@/types/api";
 import { getCampaignById } from "@/lib/data/campaigns";
 
 const STATUS_STYLES: Record<CampaignStatus, string> = {

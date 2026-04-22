@@ -3,25 +3,9 @@ import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 
 // ── Server Action ────────────────────────────────────────────────────────────
-async function loginAction(formData: FormData) {
+async function loginAction() {
   "use server";
-
-  const email    = formData.get("email")    as string;
-  const password = formData.get("password") as string;
-
-  try {
-    await signIn("credentials", {
-      email,
-      password,
-      redirectTo: "/strategy",
-    });
-  } catch (err) {
-    if (err instanceof AuthError) {
-      // Propagate the error code via search param so the client can show it
-      redirect(`/auth/login?error=${encodeURIComponent(err.type ?? "CredentialsSignin")}`);
-    }
-    throw err; // unexpected — re-throw
-  }
+  redirect("/strategy");
 }
 
 // ── Page ─────────────────────────────────────────────────────────────────────

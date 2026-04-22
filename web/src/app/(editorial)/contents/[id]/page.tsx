@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ContentStatusBadge, TeamBadge } from "@/components/ui/StatusBadge";
 import { PlatformBadge } from "@/components/editorial/PlatformBadge";
-import { ContentStatus } from "@prisma/client";
+import { ContentStatus } from "@/types/api";
 import { getContentById } from "@/lib/data/contents";
 
 const LIFECYCLE: { status: ContentStatus; label: string }[] = [

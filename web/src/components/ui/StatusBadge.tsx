@@ -1,4 +1,4 @@
-import { ContentStatus, ProductionTeam, RiskLevel } from "@prisma/client";
+import { ContentStatus, ProductionTeam, RiskLevel } from "@/types/api";
 
 // ── Content type label badges (INTERNAL, CORPORATE…) ──
 const TYPE_STYLES: Record<string, string> = {

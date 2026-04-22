@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ContentStatusBadge, TeamBadge } from "@/components/ui/StatusBadge";
 import { PlatformBadge } from "@/components/editorial/PlatformBadge";
-import { ContentStatus } from "@prisma/client";
+import { ContentStatus } from "@/types/api";
 import { getPublishingQueue } from "@/lib/data/contents";
 
 export default async function PublishingPage() {

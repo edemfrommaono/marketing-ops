@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
+import { apiClient } from "@/lib/api-client";
 
 const ROLE_STYLES: Record<string, string> = {
   ADMIN:               "bg-red-50 text-red-700",
@@ -20,21 +20,21 @@ const ROLE_LABELS: Record<string, string> = {
 
 // Infrastructure services — config-based, not DB-driven
 const INFRA_SERVICES = [
-  { name: "PostgreSQL", icon: "database",            color: "text-blue-500"   },
-  { name: "Redis",      icon: "memory",              color: "text-red-500"    },
-  { name: "MinIO",      icon: "cloud_upload",        color: "text-sky-500"    },
-  { name: "BullMQ",     icon: "queue",               color: "text-violet-500" },
+  { name: "External API", icon: "electrical_services", color: "text-blue-500"  },
   { name: "Next.js",    icon: "electrical_services", color: "text-slate-500"  },
 ];
 
 export default async function AdminDashboardPage() {
-  // Real DB counts
-  const [userCount, clientCount, activeCampaigns, recentUsers] = await Promise.all([
-    prisma.user.count().catch(() => 0),
-    prisma.client.count().catch(() => 0),
-    prisma.campaign.count({ where: { status: "ACTIVE" } }).catch(() => 0),
-    prisma.user.findMany({ take: 5, select: { id: true, name: true, email: true, role: true } }).catch(() => []),
-  ]);
+  // Fetch Admin Stats via API
+  const response = await apiClient.get<any>("/admin/dashboard-stats");
+  const stats = response.data || {
+    userCount: 0,
+    clientCount: 0,
+    activeCampaigns: 0,
+    recentUsers: [],
+  };
+
+  const { userCount, clientCount, activeCampaigns, recentUsers } = stats;
 
   const KPI = [
     { label: "Utilisateurs",      value: userCount,        icon: "group",    color: "text-blue-600 bg-blue-50"     },
@@ -100,7 +100,7 @@ export default async function AdminDashboardPage() {
             {recentUsers.length === 0 && (
               <p className="px-6 py-4 text-xs text-slate-400">Aucun utilisateur.</p>
             )}
-            {recentUsers.map(u => (
+            {recentUsers.map((u: any) => (
               <div key={u.id} className="px-6 py-3 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-editorial/10 flex items-center justify-center flex-shrink-0">
                   <span className="text-xs font-bold text-editorial">{(u.name ?? u.email ?? "?")[0].toUpperCase()}</span>
@@ -123,7 +123,7 @@ export default async function AdminDashboardPage() {
         {[
           { href: "/admin/users",        icon: "group",               label: "Gérer les utilisateurs", sub: "Inviter, modifier les rôles" },
           { href: "/admin/clients",      icon: "business",            label: "Gérer les clients",      sub: "Créer et archiver les comptes" },
-          { href: "/admin/integrations", icon: "electrical_services", label: "Intégrations",           sub: "Odoo, MinIO, Redis" },
+          { href: "/admin/integrations", icon: "electrical_services", label: "Intégrations",           sub: "External Backend API" },
         ].map(({ href, icon, label, sub }) => (
           <Link key={href} href={href} className="bg-white rounded-xl border border-slate-100 shadow-soft p-5 hover:shadow-md hover:border-editorial/30 transition-all group flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-slate-50 group-hover:bg-editorial/10 flex items-center justify-center transition-colors flex-shrink-0">

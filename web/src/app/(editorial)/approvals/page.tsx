@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ContentStatusBadge, TeamBadge } from "@/components/ui/StatusBadge";
 import { PlatformBadge } from "@/components/editorial/PlatformBadge";
-import { ContentStatus } from "@prisma/client";
+import { ContentStatus } from "@/types/api";
 import { getApprovalsQueue } from "@/lib/data/contents";
 
 const REVIEW_TYPE_STYLES: Record<string, string> = {

@@ -1,83 +1,44 @@
-import { prisma } from "@/lib/db";
+import { apiClient } from "@/lib/api-client";
 
-export interface GlobalKpis {
-  totalReach:       number;
-  totalEngagement:  number;
-  totalClicks:      number;
-  totalConversions: number;
-  avgCtr:           number | null;
-  contentCount:     number;
-}
-
-export async function getGlobalKpis(): Promise<GlobalKpis> {
-  try {
-    const agg = await prisma.performance.aggregate({
-      _sum: {
-        reach:       true,
-        engagement:  true,
-        clicks:      true,
-        conversions: true,
-      },
-      _avg: { ctr: true },
-      _count: { id: true },
-    });
-
+export async function getGlobalKpis() {
+  const response = await apiClient.get<any>("/editorial/performance/kpis");
+  
+  if (response.error || !response.data) {
     return {
-      totalReach:       agg._sum.reach       ?? 0,
-      totalEngagement:  agg._sum.engagement  ?? 0,
-      totalClicks:      agg._sum.clicks      ?? 0,
-      totalConversions: agg._sum.conversions ?? 0,
-      avgCtr:           agg._avg.ctr         ?? null,
-      contentCount:     agg._count.id,
-    };
-  } catch {
-    return {
-      totalReach: 0, totalEngagement: 0, totalClicks: 0,
-      totalConversions: 0, avgCtr: null, contentCount: 0,
+      totalReach: 0,
+      totalEngagement: 0,
+      totalClicks: 0,
+      totalConversions: 0,
+      avgCtr: 0,
+      contentCount: 0,
     };
   }
+
+  return response.data;
 }
 
-/** Per-campaign performance aggregation */
 export async function getCampaignPerformance(campaignId: string) {
-  try {
-    const entries = await prisma.calendarEntry.findMany({
-      where: { campaignId },
-      select: { contents: { select: { performance: true } } },
-    });
+  const response = await apiClient.get<any>(`/editorial/performance/campaign/${campaignId}`);
 
-    const perfs = entries.flatMap(e => e.contents.flatMap(c => c.performance ?? []));
-
+  if (response.error || !response.data) {
     return {
-      reach:       perfs.reduce((s, p) => s + p.reach,       0),
-      engagement:  perfs.reduce((s, p) => s + p.engagement,  0),
-      clicks:      perfs.reduce((s, p) => s + p.clicks,       0),
-      conversions: perfs.reduce((s, p) => s + p.conversions,  0),
-      count:       perfs.length,
+      reach: 0,
+      engagement: 0,
+      clicks: 0,
+      conversions: 0,
+      count: 0,
     };
-  } catch {
-    return { reach: 0, engagement: 0, clicks: 0, conversions: 0, count: 0 };
   }
+
+  return response.data;
 }
 
-/** Published content with performance, ordered by reach desc */
 export async function getTopContent(limit = 10) {
-  try {
-    return await prisma.performance.findMany({
-      orderBy: { reach: "desc" },
-      take:    limit,
-      include: {
-        content: {
-          include: {
-            calendarEntry: {
-              include: { campaign: { select: { name: true } } },
-            },
-          },
-        },
-        publication: { select: { platform: true, publishedAt: true, url: true } },
-      },
-    });
-  } catch {
+  const response = await apiClient.get<any[]>(`/editorial/performance/top-content?limit=${limit}`);
+
+  if (response.error || !response.data) {
     return [];
   }
+
+  return response.data;
 }

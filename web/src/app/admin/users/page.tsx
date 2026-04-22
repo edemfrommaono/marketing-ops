@@ -1,5 +1,5 @@
 import { getUsers } from "@/lib/data/users";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/types/api";
 
 const ROLES = Object.values(UserRole);
 

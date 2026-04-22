@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
 import { createCalendarEntry } from "@/lib/actions/calendar";
-import { Platform, ContentType } from "@prisma/client";
+import { Platform, ContentType } from "@/types/api";
 
 // ── Listes ───────────────────────────────────────────────────────────────────
 const PLATFORMS: { value: Platform; label: string; icon: string }[] = [

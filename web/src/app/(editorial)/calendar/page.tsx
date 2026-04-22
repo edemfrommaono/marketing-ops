@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CalendarGrid } from "@/components/editorial/CalendarGrid";
 import { PlatformBadge } from "@/components/editorial/PlatformBadge";
 import { ContentStatusBadge } from "@/components/ui/StatusBadge";
-import { ContentStatus } from "@prisma/client";
+import { ContentStatus } from "@/types/api";
 import { getCalendarEntries, getPlatformBreakdown } from "@/lib/data/calendar";
 
 export default async function CalendarPage({

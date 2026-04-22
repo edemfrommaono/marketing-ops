@@ -1,63 +1,46 @@
-import { prisma } from "@/lib/db";
-import { Platform, type Prisma } from "@prisma/client";
+import { apiClient } from "@/lib/api-client";
+import { ContentStatus } from "@/types/api";
 
-export type CalendarEntryWithContent = Prisma.CalendarEntryGetPayload<{
-  include: {
-    campaign: { select: { id: true; name: true } };
-    contents: { select: { id: true; status: true; title: true } };
-  };
-}>;
-
-export interface CalendarFilters {
-  from?:       Date;
-  to?:         Date;
-  platform?:   Platform;
-  campaignId?: string;
+export interface CalendarEntry {
+  id:              string;
+  publicationDate: Date;
+  platform:        string;
+  contentType:     string;
+  theme:           string;
+  contents: {
+    id:     string;
+    title:  string;
+    status: ContentStatus;
+  }[];
 }
 
-export async function getCalendarEntries(filters: CalendarFilters = {}) {
-  const {
-    from = new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    to   = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
-    platform,
-    campaignId,
-  } = filters;
+export async function getCalendarEntries(filters: { from: Date; to: Date }): Promise<CalendarEntry[]> {
+  const { from, to } = filters;
+  const response = await apiClient.get<CalendarEntry[]>(
+    `/editorial/calendar?from=${from.toISOString()}&to=${to.toISOString()}`
+  );
 
-  try {
-    const where: Prisma.CalendarEntryWhereInput = {
-      publicationDate: { gte: from, lte: to },
-      ...(platform   && { platform }),
-      ...(campaignId && { campaignId }),
-    };
-
-    const entries = await prisma.calendarEntry.findMany({
-      where,
-      include: {
-        campaign: { select: { id: true, name: true } },
-        contents: { select: { id: true, status: true, title: true } },
-      },
-      orderBy: { publicationDate: "asc" },
-    });
-
-    return entries;
-  } catch {
-    return [] as CalendarEntryWithContent[];
+  if (response.error || !response.data) {
+    console.error("Failed to fetch calendar entries:", response.error);
+    // Fallback to empty or mock if needed, but returning empty for now to show it's connected
+    return [];
   }
+
+  // Ensure dates are parsed
+  return response.data.map(entry => ({
+    ...entry,
+    publicationDate: new Date(entry.publicationDate)
+  }));
 }
 
-/** Platform breakdown — count of entries per platform for the current month */
-export async function getPlatformBreakdown(from?: Date, to?: Date) {
-  const start = from ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  const end   = to   ?? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
+export async function getPlatformBreakdown(from: Date, to: Date) {
+  const response = await apiClient.get<{ platform: string; count: number }[]>(
+    `/editorial/performance/platforms?from=${from.toISOString()}&to=${to.toISOString()}`
+  );
 
-  try {
-    const rows = await prisma.calendarEntry.groupBy({
-      by:    ["platform"],
-      where: { publicationDate: { gte: start, lte: end } },
-      _count: { platform: true },
-    });
-    return rows.map(r => ({ platform: r.platform, count: r._count.platform }));
-  } catch {
-    return [] as { platform: Platform; count: number }[];
+  if (response.error || !response.data) {
+    return [];
   }
+
+  return response.data;
 }

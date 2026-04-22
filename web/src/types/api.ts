@@ -1,0 +1,94 @@
+// ENUMS extracted from Prisma schema for frontend-only use
+
+export enum UserRole {
+  ADMIN = "ADMIN",
+  STRATEGIST = "STRATEGIST",
+  CONTENT_PLANNER = "CONTENT_PLANNER",
+  DESIGNER = "DESIGNER",
+  PHOTOGRAPHER = "PHOTOGRAPHER",
+  VIDEOGRAPHER = "VIDEOGRAPHER",
+  SOCIAL_MEDIA_MANAGER = "SOCIAL_MEDIA_MANAGER",
+  CLIENT = "CLIENT"
+}
+
+export enum CampaignStatus {
+  DRAFT = "DRAFT",
+  ACTIVE = "ACTIVE",
+  PAUSED = "PAUSED",
+  COMPLETED = "COMPLETED",
+  ARCHIVED = "ARCHIVED"
+}
+
+export enum Platform {
+  INSTAGRAM = "INSTAGRAM",
+  FACEBOOK = "FACEBOOK",
+  LINKEDIN = "LINKEDIN",
+  TIKTOK = "TIKTOK",
+  YOUTUBE = "YOUTUBE",
+  X = "X"
+}
+
+export enum ContentType {
+  POST = "POST",
+  STORY = "STORY",
+  REEL = "REEL",
+  VIDEO = "VIDEO",
+  ARTICLE = "ARTICLE",
+  INFOGRAPHIC = "INFOGRAPHIC",
+  CAROUSEL = "CAROUSEL"
+}
+
+export enum ContentFormat {
+  IMAGE = "IMAGE",
+  VIDEO = "VIDEO",
+  TEXT = "TEXT",
+  MIXED = "MIXED"
+}
+
+export enum ContentStatus {
+  DRAFT = "DRAFT",
+  IN_PRODUCTION = "IN_PRODUCTION",
+  INTERNAL_REVIEW = "INTERNAL_REVIEW",
+  CLIENT_REVIEW = "CLIENT_REVIEW",
+  APPROVED = "APPROVED",
+  REVISION_REQUIRED = "REVISION_REQUIRED",
+  SCHEDULED = "SCHEDULED",
+  PUBLISHED = "PUBLISHED",
+  ARCHIVED = "ARCHIVED"
+}
+
+export enum ProductionTeam {
+  DESIGN = "DESIGN",
+  PHOTOGRAPHY = "PHOTOGRAPHY",
+  VIDEO = "VIDEO",
+  COPYWRITING = "COPYWRITING"
+}
+
+export enum TaskStatus {
+  PENDING = "PENDING",
+  IN_PROGRESS = "IN_PROGRESS",
+  COMPLETED = "COMPLETED",
+  BLOCKED = "BLOCKED"
+}
+
+export enum AssetType {
+  IMAGE = "IMAGE",
+  VIDEO = "VIDEO",
+  DOCUMENT = "DOCUMENT",
+  AUDIO = "AUDIO",
+  RAW = "RAW"
+}
+
+export enum ApprovalStatus {
+  PENDING = "PENDING",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
+  REVISION_REQUIRED = "REVISION_REQUIRED"
+}
+
+export enum RiskLevel {
+  LOW = "LOW",
+  MEDIUM = "MEDIUM",
+  HIGH = "HIGH",
+  CRITICAL = "CRITICAL"
+}

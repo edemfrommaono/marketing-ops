@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getGlobalKpis } from "@/lib/data/performance";
 import { getCampaigns } from "@/lib/data/campaigns";
 import { getPlatformBreakdown } from "@/lib/data/calendar";
-import { prisma } from "@/lib/db";
 
 const STATUS_STYLES: Record<string, string> = {
   ACTIVE:    "bg-emerald-50 text-emerald-700",

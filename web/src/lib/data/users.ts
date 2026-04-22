@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/db";
-import { UserRole } from "@prisma/client";
+import { apiClient } from "@/lib/api-client";
+import { UserRole } from "@/types/api";
 
 export interface UserRow {
   id:        string;
@@ -10,26 +10,12 @@ export interface UserRow {
 }
 
 export async function getUsers(): Promise<UserRow[]> {
-  try {
-    const users = await prisma.user.findMany({
-      orderBy: { id: "asc" },
-      select: {
-        id:   true,
-        name: true,
-        email: true,
-        role: true,
-      },
-    });
-
-    // User model has no createdAt — use fallback
-    return users.map(u => ({
-      id:        u.id,
-      name:      u.name,
-      email:     u.email,
-      role:      u.role,
-      createdAt: "—",
-    }));
-  } catch {
+  const response = await apiClient.get<UserRow[]>("/users");
+  
+  if (response.error || !response.data) {
+    console.error("Failed to fetch users:", response.error);
     return [];
   }
+
+  return response.data;
 }

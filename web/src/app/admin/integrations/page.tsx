@@ -1,50 +1,26 @@
-import { prisma } from "@/lib/db";
+import { apiClient } from "@/lib/api-client";
 
 // Static infrastructure services (config-based, not user-managed)
 const INFRA_SERVICES = [
   {
-    id:      "postgresql",
-    name:    "PostgreSQL",
-    icon:    "database",
+    id:      "api",
+    name:    "External API",
+    icon:    "electrical_services",
     color:   "text-blue-600 bg-blue-50",
-    endpoint: process.env.DATABASE_URL ? "Configuré via DATABASE_URL" : "Non configuré",
+    endpoint: process.env.NEXT_PUBLIC_API_URL || "Non configuré",
     details: [
-      { label: "Type",   value: "PostgreSQL 15" },
-      { label: "Statut", value: "Infrastructure" },
-    ],
-  },
-  {
-    id:      "redis",
-    name:    "Redis (Queue)",
-    icon:    "memory",
-    color:   "text-red-600 bg-red-50",
-    endpoint: process.env.REDIS_URL ?? "redis://redis:6379",
-    details: [
-      { label: "Usage",  value: "BullMQ job queue" },
-      { label: "Statut", value: "Infrastructure" },
-    ],
-  },
-  {
-    id:      "minio",
-    name:    "MinIO (Storage)",
-    icon:    "cloud_upload",
-    color:   "text-sky-600 bg-sky-50",
-    endpoint: process.env.S3_ENDPOINT ?? "http://minio:9000",
-    details: [
-      { label: "Bucket", value: process.env.S3_BUCKET_NAME ?? "mops-storage" },
-      { label: "Région", value: process.env.S3_REGION ?? "us-east-1" },
+      { label: "Type",   value: "REST / JSON" },
+      { label: "Statut", value: "Connecté" },
     ],
   },
 ];
 
 export default async function AdminIntegrationsPage() {
-  // Real user integration connections from DB
-  const connections = await prisma.integrationConnection.findMany({
-    orderBy: { createdAt: "desc" },
-    include: { user: { select: { name: true, email: true } } },
-  }).catch(() => []);
+  // Fetch user integration connections via API
+  const response = await apiClient.get<any[]>("/admin/integrations");
+  const connections = response.data || [];
 
-  const byProvider = connections.reduce<Record<string, typeof connections>>((acc, c) => {
+  const byProvider = connections.reduce<Record<string, any[]>>((acc, c) => {
     (acc[c.provider] ??= []).push(c);
     return acc;
   }, {});
@@ -87,9 +63,9 @@ export default async function AdminIntegrationsPage() {
                   {conns.map(c => (
                     <div key={c.id} className="px-6 py-3 flex items-center gap-3 text-sm">
                       <div className="w-7 h-7 rounded-full bg-editorial/10 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-bold text-editorial">{(c.user.name ?? c.user.email ?? "?")[0].toUpperCase()}</span>
+                        <span className="text-xs font-bold text-editorial">{(c.user?.name ?? c.user?.email ?? "?")[0].toUpperCase()}</span>
                       </div>
-                      <span className="flex-1 text-xs font-medium text-anthracite">{c.user.name ?? c.user.email}</span>
+                      <span className="flex-1 text-xs font-medium text-anthracite">{c.user?.name ?? c.user?.email}</span>
                       {c.providerUrl && (
                         <span className="text-2xs text-slate-400 font-mono truncate max-w-[200px]">{c.providerUrl}</span>
                       )}

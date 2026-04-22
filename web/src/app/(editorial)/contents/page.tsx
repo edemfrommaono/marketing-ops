@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ContentStatusBadge, TeamBadge } from "@/components/ui/StatusBadge";
 import { PlatformBadge } from "@/components/editorial/PlatformBadge";
-import { ContentStatus, ProductionTeam } from "@prisma/client";
+import { ContentStatus, ProductionTeam } from "@/types/api";
 import { getContents } from "@/lib/data/contents";
 
 const TEAM_LABELS: Record<ProductionTeam, string> = {

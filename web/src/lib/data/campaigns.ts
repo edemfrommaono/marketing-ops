@@ -1,92 +1,23 @@
-import { prisma } from "@/lib/db";
-import { CampaignStatus, type Prisma } from "@prisma/client";
+import { apiClient } from "@/lib/api-client";
+import { CampaignStatus } from "@/types/api";
 
-export type CampaignRow = Prisma.CampaignGetPayload<{
-  include: {
-    client: { select: { name: true; company: true } };
-    _count: { select: { calendarEntries: true } };
-    risks: { select: { level: true; isResolved: true } };
-  };
-}>;
+export async function getCampaigns(filters: any = {}) {
+  const { page = 1, limit = 25 } = filters;
+  const response = await apiClient.get<any>(`/editorial/campaigns?page=${page}&limit=${limit}`);
 
-export interface CampaignFilters {
-  status?:   CampaignStatus;
-  clientId?: string;
-  search?:   string;
-  page?:     number;
-  limit?:    number;
-}
-
-export async function getCampaigns(filters: CampaignFilters = {}) {
-  const { status, clientId, search, page = 1, limit = 25 } = filters;
-
-  try {
-    const where: Prisma.CampaignWhereInput = {
-      ...(status   && { status }),
-      ...(clientId && { clientId }),
-      ...(search   && { name: { contains: search, mode: "insensitive" } }),
-    };
-
-    const [campaigns, total] = await Promise.all([
-      prisma.campaign.findMany({
-        where,
-        include: {
-          client: { select: { name: true, company: true } },
-          _count: { select: { calendarEntries: true } },
-          risks:  { select: { level: true, isResolved: true } },
-        },
-        orderBy: { createdAt: "desc" },
-        take:    limit,
-        skip:    (page - 1) * limit,
-      }),
-      prisma.campaign.count({ where }),
-    ]);
-
-    return { campaigns, total, page, limit };
-  } catch {
-    // DB unavailable — return empty set
-    return { campaigns: [] as CampaignRow[], total: 0, page, limit };
+  if (response.error || !response.data) {
+    return { campaigns: [], total: 0, page, limit };
   }
+
+  return response.data;
 }
 
-export type CampaignDetail = Prisma.CampaignGetPayload<{
-  include: {
-    client: true;
-    calendarEntries: {
-      include: {
-        contents: {
-          include: {
-            _count: { select: { assets: true; tasks: true } };
-            approvals: { select: { internalStatus: true; clientStatus: true } };
-          };
-        };
-      };
-    };
-    risks: true;
-  };
-}>;
+export async function getCampaignById(id: string) {
+  const response = await apiClient.get<any>(`/editorial/campaigns/${id}`);
 
-export async function getCampaignById(id: string): Promise<CampaignDetail | null> {
-  try {
-    return await prisma.campaign.findUnique({
-      where: { id },
-      include: {
-        client: true,
-        calendarEntries: {
-          include: {
-            contents: {
-              include: {
-                _count: { select: { assets: true, tasks: true } },
-                approvals: { select: { internalStatus: true, clientStatus: true } },
-              },
-            },
-          },
-          orderBy: { publicationDate: "asc" },
-        },
-        risks: { orderBy: [{ level: "desc" }, { createdAt: "desc" }] },
-      },
-    });
-  } catch {
+  if (response.error || !response.data) {
     return null;
   }
+
+  return response.data;
 }
